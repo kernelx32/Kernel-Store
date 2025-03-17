@@ -4,32 +4,50 @@ require_once 'config/database.php';
 require_once 'includes/functions.php';
 require_once 'includes/header.php';
 
-$featured_games = [
-    [
-        'name' => 'Marvel Rivals',
-        'description' => 'Marvel Rivals is a team-based hero shooter featuring iconic Marvel characters...',
-        'image' => 'marvelrivals.jpg',
-        'accounts' => 0
-    ],
-    [
-        'name' => 'Call of Duty',
-        'description' => 'Call of Duty is a first-person shooter game series published by Activision...',
-        'image' => 'callofduty.jpg',
-        'accounts' => 0
-    ],
-    [
-        'name' => 'Fragpunk',
-        'description' => 'Fragpunk is a futuristic first-person shooter with cyberpunk elements...',
-        'image' => 'fragpunk.jpg',
-        'accounts' => 0
-    ],
-    [
-        'name' => 'Overwatch',
-        'description' => 'Overwatch is a team-based multiplayer first-person shooter developed by Blizzard...',
-        'image' => 'overwatch.jpg',
-        'accounts' => 0
-    ]
-];
+// Fetch games dynamically from the database
+$featured_games = getAllGames($conn);
+
+// If no games are fetched from the database, use hardcoded data with IDs
+if (empty($featured_games)) {
+    $featured_games = [
+        [
+            'id' => 1,
+            'name' => 'Marvel Rivals',
+            'description' => 'Marvel Rivals is a team-based hero shooter featuring iconic Marvel characters...',
+            'image' => 'marvelrivals.jpg',
+            'accounts' => 0 // Added accounts key with default value
+        ],
+        [
+            'id' => 2,
+            'name' => 'Call of Duty',
+            'description' => 'Call of Duty is a first-person shooter game series published by Activision...',
+            'image' => 'callofduty.jpg',
+            'accounts' => 0 // Added accounts key with default value
+        ],
+        [
+            'id' => 3,
+            'name' => 'Fragpunk',
+            'description' => 'Fragpunk is a futuristic first-person shooter with cyberpunk elements...',
+            'image' => 'fragpunk.jpg',
+            'accounts' => 0 // Added accounts key with default value
+        ],
+        [
+            'id' => 4,
+            'name' => 'Overwatch',
+            'description' => 'Overwatch is a team-based multiplayer first-person shooter developed by Blizzard...',
+            'image' => 'overwatch.jpg',
+            'accounts' => 0 // Added accounts key with default value
+        ]
+    ];
+}
+
+// If using database, ensure 'accounts' key is set
+foreach ($featured_games as &$game) {
+    if (!isset($game['accounts'])) {
+        $game['accounts'] = 0; // Set default value if 'accounts' is not set
+    }
+}
+unset($game); // Unset the reference to avoid issues
 ?>
 
 <!DOCTYPE html>
@@ -65,7 +83,7 @@ $featured_games = [
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
                 <?php foreach ($featured_games as $game): ?>
-                    <div class="bg-gray-800 rounded-xl overflow-hidden hover:shadow-lg hover:shadow-indigo-500/20 transition-all duration-300">
+                    <a href="accounts.php?game_id=<?php echo htmlspecialchars($game['id']); ?>" class="bg-gray-800 rounded-xl overflow-hidden hover:shadow-lg hover:shadow-indigo-500/20 transition-all duration-300 block">
                         <div class="h-48 overflow-hidden relative">
                             <img src="assets/images/<?php echo htmlspecialchars($game['image']); ?>" alt="<?php echo htmlspecialchars($game['name']); ?>" class="w-full h-full object-cover">
                         </div>
@@ -73,11 +91,10 @@ $featured_games = [
                             <h3 class="text-xl font-bold mb-2"><?php echo htmlspecialchars($game['name']); ?></h3>
                             <p class="text-gray-400 mb-4"><?php echo htmlspecialchars($game['description']); ?></p>
                             <div class="flex space-x-2">
-                                <a href="accounts.php?game_id=<?php echo htmlspecialchars($game['name']); ?>" class="text-indigo-400 hover:text-indigo-300">View Accounts</a>
-                                <span class="text-gray-400"><?php echo $game['accounts']; ?> Accounts</span>
+                                <span class="text-gray-400"><?php echo isset($game['accounts']) ? $game['accounts'] : 0; ?> Accounts</span>
                             </div>
                         </div>
-                    </div>
+                    </a>
                 <?php endforeach; ?>
             </div>
         </div>

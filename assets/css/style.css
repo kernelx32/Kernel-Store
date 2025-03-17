@@ -26,6 +26,22 @@ html {
     transform: scale(1.1);
 }
 
+.game-card {
+    display: block; /* عشان الـ <a> ياخد شكل الكارت كامل */
+    text-decoration: none; /* إزالة الخط تحت الرابط */
+    color: inherit; /* عشان اللون ما يتغيرش لأزرق (لون الروابط الافتراضي) */
+    padding: 15px;
+    border-radius: 10px;
+    background-color: #1a1f2e;
+    transition: transform 0.2s ease, box-shadow 0.2s ease; /* تأثير انتقال سلس */
+}
+
+.game-card:hover {
+    transform: scale(1.05); /* تكبير الكارت شوية لما تحط الماوس عليه */
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); /* إضافة ظل لتأثير بصري */
+    cursor: pointer; /* إظهار مؤشر اليد عشان المستخدم يعرف إنه clickable */
+}
+
 /* Testimonial slider */
 .testimonial-container {
     width: 100%;
@@ -130,4 +146,18 @@ html {
 
 ::-webkit-scrollbar-thumb:hover {
     background: #4338ca;
+}
+@media (max-width: 768px) {
+    body {
+        font-size: 14px; /* تصغير الخط على الموبايل */
+    }
+    .container { /* لو عندك كلاس container */
+        width: 100%;
+        padding: 10px;
+    }
+    /* ظبط أي عناصر تانية زي الأزرار أو الصور */
+    button {
+        width: 100%;
+        margin: 5px 0;
+    }
 }

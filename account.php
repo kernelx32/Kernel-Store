@@ -20,8 +20,40 @@ if (!$account) {
     exit;
 }
 
+// Add default values if keys are not present for the account
+$account['rating'] = isset($account['rating']) ? floatval($account['rating']) : 0;
+$account['reviews'] = isset($account['reviews']) ? intval($account['reviews']) : 0;
+$account['features'] = isset($account['features']) && !empty($account['features']) ? $account['features'] : '';
+
 // Get similar accounts
 $similarAccounts = getSimilarAccounts($conn, $account['game_id'], $accountId, 3);
+
+// Add default values for similar accounts to avoid warnings
+foreach ($similarAccounts as &$similar) {
+    $similar['rating'] = isset($similar['rating']) ? floatval($similar['rating']) : 0;
+    $similar['reviews'] = isset($similar['reviews']) ? intval($similar['reviews']) : 0;
+}
+unset($similar); // Unset the reference to avoid issues
+
+function getSimilarAccounts($conn, $gameId, $accountId) {
+    $accounts = [];
+    $sql = "SELECT a.*, g.name as game_name 
+            FROM accounts a 
+            JOIN games g ON a.game_id = g.id 
+            WHERE a.game_id = ? AND a.status = 'available' AND a.id != ? 
+            LIMIT 4";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("ii", $gameId, $accountId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    if ($result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+            $accounts[] = $row;
+        }
+    }
+    return $accounts;
+}
 
 // Handle purchase
 $error = '';

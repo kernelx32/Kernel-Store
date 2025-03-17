@@ -4,11 +4,13 @@ function sanitizeInput($data) {
 }
 
 function getAllGames($conn) {
-    $sql = "SELECT * FROM games";
-    $result = $conn->query($sql);
     $games = [];
-    while ($row = $result->fetch_assoc()) {
-        $games[] = $row;
+    $sql = "SELECT g.*, COUNT(a.id) as accounts FROM games g LEFT JOIN accounts a ON g.id = a.game_id GROUP BY g.id";
+    $result = $conn->query($sql);
+    if ($result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+            $games[] = $row;
+        }
     }
     return $games;
 }

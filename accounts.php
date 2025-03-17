@@ -51,6 +51,9 @@ if ($gameId > 0) {
     
     if ($result->num_rows > 0) {
         while($row = $result->fetch_assoc()) {
+            // Add default rating if not present
+            $row['rating'] = isset($row['rating']) ? $row['rating'] : 0;
+            $row['reviews'] = isset($row['reviews']) ? $row['reviews'] : 0; // Also handle reviews
             $accounts[] = $row;
         }
     }
@@ -87,11 +90,11 @@ $totalPages = ceil($totalAccounts / $limit);
             
             <!-- Game Filter -->
             <div class="flex flex-wrap gap-3">
-                <a href="accounts.php" class="px-4 py-2 rounded-lg <?php echo $gameId === 0 ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'; ?> transition-colors">
+                <a href="accounts.php" class="px-4 py-2 rounded-lg <?php echo $gameId === 0 ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'; ?> transition-colors game-filter-btn">
                     All Games
                 </a>
                 <?php foreach ($games as $game): ?>
-                    <a href="accounts.php?game_id=<?php echo $game['id']; ?>" class="px-4 py-2 rounded-lg <?php echo $gameId === $game['id'] ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'; ?> transition-colors">
+                    <a href="accounts.php?game_id=<?php echo $game['id']; ?>" class="px-4 py-2 rounded-lg <?php echo $gameId === $game['id'] ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'; ?> transition-colors game-filter-btn">
                         <?php echo $game['name']; ?>
                     </a>
                 <?php endforeach; ?>
@@ -105,7 +108,7 @@ $totalPages = ceil($totalAccounts / $limit);
             <?php if (count($accounts) > 0): ?>
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
                     <?php foreach ($accounts as $account): ?>
-                        <div class="bg-gray-800 rounded-xl overflow-hidden hover:shadow-lg hover:shadow-indigo-500/20 transition-all duration-300">
+                        <a href="account.php?id=<?php echo $account['id']; ?>" class="bg-gray-800 rounded-xl overflow-hidden hover:shadow-lg hover:shadow-indigo-500/20 transition-all duration-300 block">
                             <div class="h-48 overflow-hidden relative">
                                 <img src="assets/images/accounts/<?php echo $account['image']; ?>" alt="<?php echo $account['title']; ?>" class="w-full h-full object-cover">
                                 <div class="absolute top-4 left-4 bg-indigo-600 text-white text-xs px-2 py-1 rounded">
@@ -121,15 +124,18 @@ $totalPages = ceil($totalAccounts / $limit);
                                 <h3 class="text-xl font-bold mb-2"><?php echo $account['title']; ?></h3>
                                 <div class="flex items-center mb-4">
                                     <div class="flex mr-2">
-                                        <?php for ($i = 1; $i <= 5; $i++): ?>
-                                            <?php if ($i <= $account['rating']): ?>
+                                        <?php 
+                                        // Use rating if set, otherwise default to 0
+                                        $rating = isset($account['rating']) ? $account['rating'] : 0;
+                                        for ($i = 1; $i <= 5; $i++): ?>
+                                            <?php if ($i <= $rating): ?>
                                                 <i class="fas fa-star text-yellow-400"></i>
                                             <?php else: ?>
                                                 <i class="far fa-star text-gray-500"></i>
                                             <?php endif; ?>
                                         <?php endfor; ?>
                                     </div>
-                                    <span class="text-gray-400 text-sm">(<?php echo $account['reviews']; ?> reviews)</span>
+                                    <span class="text-gray-400 text-sm">(<?php echo isset($account['reviews']) ? $account['reviews'] : 0; ?> reviews)</span>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <div>
@@ -138,12 +144,9 @@ $totalPages = ceil($totalAccounts / $limit);
                                         <?php endif; ?>
                                         <span class="text-white font-bold text-xl">$<?php echo number_format($account['price'], 2); ?></span>
                                     </div>
-                                    <a href="account.php?id=<?php echo $account['id']; ?>" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200">
-                                        View Details
-                                    </a>
                                 </div>
                             </div>
-                        </div>
+                        </a>
                     <?php endforeach; ?>
                 </div>
                 
@@ -186,6 +189,33 @@ $totalPages = ceil($totalAccounts / $limit);
     
     <!-- Footer -->
     <?php include 'includes/footer.php'; ?>
+    
+    <script>
+        // Add active state to filter buttons dynamically
+        document.addEventListener('DOMContentLoaded', function() {
+            const filterButtons = document.querySelectorAll('.game-filter-btn');
+
+            filterButtons.forEach(button => {
+                button.addEventListener('click', function(event) {
+                    // Prevent default behavior to handle the styling first
+                    event.preventDefault();
+
+                    // Remove active styles from all buttons
+                    filterButtons.forEach(btn => {
+                        btn.classList.remove('bg-indigo-600', 'text-white');
+                        btn.classList.add('bg-gray-700', 'text-gray-300', 'hover:bg-gray-600');
+                    });
+
+                    // Add active styles to the clicked button
+                    this.classList.remove('bg-gray-700', 'text-gray-300', 'hover:bg-gray-600');
+                    this.classList.add('bg-indigo-600', 'text-white');
+
+                    // Navigate to the URL after styling
+                    window.location.href = this.getAttribute('href');
+                });
+            });
+        });
+    </script>
     
     <script src="assets/js/script.js"></script>
 </body>
