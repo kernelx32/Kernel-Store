@@ -90,11 +90,11 @@ $totalPages = ceil($totalAccounts / $limit);
             
             <!-- Game Filter -->
             <div class="flex flex-wrap gap-3">
-                <a href="accounts.php" class="px-4 py-2 rounded-lg <?php echo $gameId === 0 ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'; ?> transition-colors game-filter-btn">
+                <a href="accounts.php" class="game-filter-btn px-4 py-2 rounded-lg <?php echo $gameId === 0 ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'; ?> transition-colors" data-game-id="0">
                     All Games
                 </a>
                 <?php foreach ($games as $game): ?>
-                    <a href="accounts.php?game_id=<?php echo $game['id']; ?>" class="px-4 py-2 rounded-lg <?php echo $gameId === $game['id'] ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'; ?> transition-colors game-filter-btn">
+                    <a href="accounts.php?game_id=<?php echo $game['id']; ?>" class="game-filter-btn px-4 py-2 rounded-lg <?php echo $gameId === $game['id'] ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'; ?> transition-colors" data-game-id="<?php echo $game['id']; ?>">
                         <?php echo $game['name']; ?>
                     </a>
                 <?php endforeach; ?>
@@ -191,28 +191,20 @@ $totalPages = ceil($totalAccounts / $limit);
     <?php include 'includes/footer.php'; ?>
     
     <script>
-        // Add active state to filter buttons dynamically
+        // Ensure the active filter button is highlighted on page load
         document.addEventListener('DOMContentLoaded', function() {
+            const gameId = <?php echo json_encode($gameId); ?>;
             const filterButtons = document.querySelectorAll('.game-filter-btn');
 
             filterButtons.forEach(button => {
-                button.addEventListener('click', function(event) {
-                    // Prevent default behavior to handle the styling first
-                    event.preventDefault();
-
-                    // Remove active styles from all buttons
-                    filterButtons.forEach(btn => {
-                        btn.classList.remove('bg-indigo-600', 'text-white');
-                        btn.classList.add('bg-gray-700', 'text-gray-300', 'hover:bg-gray-600');
-                    });
-
-                    // Add active styles to the clicked button
-                    this.classList.remove('bg-gray-700', 'text-gray-300', 'hover:bg-gray-600');
-                    this.classList.add('bg-indigo-600', 'text-white');
-
-                    // Navigate to the URL after styling
-                    window.location.href = this.getAttribute('href');
-                });
+                const buttonGameId = parseInt(button.getAttribute('data-game-id'));
+                if (buttonGameId === gameId) {
+                    button.classList.remove('bg-gray-700', 'text-gray-300', 'hover:bg-gray-600');
+                    button.classList.add('bg-indigo-600', 'text-white');
+                } else {
+                    button.classList.remove('bg-indigo-600', 'text-white');
+                    button.classList.add('bg-gray-700', 'text-gray-300', 'hover:bg-gray-600');
+                }
             });
         });
     </script>

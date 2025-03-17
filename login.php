@@ -4,6 +4,11 @@ require_once 'config/database.php';
 require_once 'includes/functions.php';
 require_once 'includes/auth.php';
 
+// Check if $conn is properly initialized
+if (!$conn || $conn->connect_error) {
+    die("Database connection failed: " . ($conn ? $conn->connect_error : "Connection not initialized"));
+}
+
 if (isLoggedIn()) {
     if (isAdmin($conn)) {
         header("Location: /kernelstore/admin/index.php");
@@ -26,8 +31,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $token = bin2hex(random_bytes(32)); // Generate a secure token
             $sql = "UPDATE users SET remember_token = ? WHERE id = ?";
             $stmt = $conn->prepare($sql);
+
+            // Check if prepare failed
+            if ($stmt === false) {
+                die("Prepare failed: " . $conn->error);
+            }
+
             $stmt->bind_param("si", $token, $_SESSION['user_id']);
             $stmt->execute();
+            $stmt->close();
+
             setcookie('remember_token', $token, time() + (30 * 24 * 60 * 60)); // 30 days
         }
         if (isAdmin($conn)) {

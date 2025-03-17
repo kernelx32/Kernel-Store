@@ -1,13 +1,10 @@
 <?php
 session_start();
-require_once '../includes/config.php';
-require_once '../includes/functions.php';
+require_once 'config/database.php';
+require_once 'includes/functions.php';
 
 // Check if user is logged in and is admin
-if (!isset($_SESSION['user_id']) || !$_SESSION['is_admin']) {
-    header('Location: ../login.php');
-    exit;
-}
+
 
 // Handle form submissions
 $message = '';
@@ -152,252 +149,187 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manage Games - KernelStore Admin</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../assets/css/admin.css">
+    <!-- Use the same CSS as the main site -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/style.css">
 </head>
-<body>
-    <div class="admin-container">
-        <!-- Sidebar -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <div class="logo">
-                    <div class="logo-icon">
-                        <span>K</span>
-                    </div>
-                    <span class="logo-text">KernelStore</span>
-                </div>
-                <button class="sidebar-toggle" id="sidebarToggle">
-                    <i class="fas fa-bars"></i>
-                </button>
-            </div>
-            
-            <nav class="sidebar-nav">
-                <ul>
-                    <li>
-                        <a href="index.php">
-                            <i class="fas fa-tachometer-alt"></i>
-                            <span>Dashboard</span>
-                        </a>
-                    </li>
-                    <li class="active">
-                        <a href="games.php">
-                            <i class="fas fa-gamepad"></i>
-                            <span>Games</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="accounts.php">
-                            <i class="fas fa-user-circle"></i>
-                            <span>Accounts</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="boosting.php">
-                            <i class="fas fa-rocket"></i>
-                            <span>Boosting</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="orders.php">
-                            <i class="fas fa-shopping-cart"></i>
-                            <span>Orders</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="users.php">
-                            <i class="fas fa-users"></i>
-                            <span>Users</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="settings.php">
-                            <i class="fas fa-cog"></i>
-                            <span>Settings</span>
-                        </a>
-                    </li>
-                </ul>
-            </nav>
-            
-            <div class="sidebar-footer">
-                <a href="../index.php" target="_blank">
-                    <i class="fas fa-external-link-alt"></i>
-                    <span>View Site</span>
-                </a>
-                <a href="../logout.php">
-                    <i class="fas fa-sign-out-alt"></i>
-                    <span>Logout</span>
-                </a>
-            </div>
-        </aside>
-        
-        <!-- Main Content -->
-        <main class="main-content">
-            <header class="content-header">
-                <h1><?php echo $editGame ? 'Edit Game' : 'Manage Games'; ?></h1>
-                <div class="user-info">
-                    <span>Welcome, <?php echo $_SESSION['username']; ?></span>
-                    <div class="user-avatar">
-                        <img src="../assets/images/avatars/admin.jpg" alt="Admin">
-                    </div>
-                </div>
-            </header>
-            
+<body class="bg-gray-900 text-white font-poppins min-h-screen flex flex-col">
+    <!-- Use the main site's header -->
+    <?php include '../includes/header.php'; ?>
+    
+    <!-- Add a header section similar to the main site -->
+    <section class="bg-gray-800 py-12">
+        <div class="container mx-auto px-4">
+            <h1 class="text-3xl font-bold mb-6 text-center"><?php echo $editGame ? 'Edit Game' : 'Manage Games'; ?></h1>
+            <p class="lead text-center mb-6">Admin panel for managing games</p>
+        </div>
+    </section>
+    
+    <!-- Main Content -->
+    <section class="py-16">
+        <div class="container mx-auto px-4">
             <?php if (!empty($message)): ?>
-                <div class="success-message"><?php echo $message; ?></div>
+                <div class="bg-green-500/20 border border-green-500 text-green-300 px-4 py-3 rounded-lg mb-6 text-center">
+                    <?php echo $message; ?>
+                </div>
             <?php endif; ?>
             
             <?php if (!empty($error)): ?>
-                <div class="error-alert"><?php echo $error; ?></div>
+                <div class="bg-red-500/20 border border-red-500 text-red-300 px-4 py-3 rounded-lg mb-6 text-center">
+                    <?php echo $error; ?>
+                </div>
             <?php endif; ?>
             
             <?php if ($editGame): ?>
                 <!-- Edit Game Form -->
-                <div class="form-card">
+                <div class="max-w-2xl mx-auto bg-gray-800 rounded-xl p-8 shadow-lg hover:shadow-indigo-500/20 transition-all duration-300">
                     <form action="games.php" method="POST" enctype="multipart/form-data">
                         <input type="hidden" name="id" value="<?php echo $editGame['id']; ?>">
                         <input type="hidden" name="current_image" value="<?php echo $editGame['image']; ?>">
                         
-                        <div class="form-group">
-                            <label for="name">Game Name</label>
-                            <input type="text" id="name" name="name" class="form-control" value="<?php echo $editGame['name']; ?>" required>
+                        <div class="mb-4">
+                            <label for="name" class="block text-gray-400 mb-2">Game Name</label>
+                            <input type="text" id="name" name="name" class="w-full bg-gray-700 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" value="<?php echo $editGame['name']; ?>" required>
                         </div>
                         
-                        <div class="form-group">
-                            <label for="slug">Slug (URL-friendly name)</label>
-                            <input type="text" id="slug" name="slug" class="form-control" value="<?php echo $editGame['slug']; ?>" required>
+                        <div class="mb-4">
+                            <label for="slug" class="block text-gray-400 mb-2">Slug (URL-friendly name)</label>
+                            <input type="text" id="slug" name="slug" class="w-full bg-gray-700 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" value="<?php echo $editGame['slug']; ?>" required>
                         </div>
                         
-                        <div class="form-group">
-                            <label for="description">Description</label>
-                            <textarea id="description" name="description" class="form-control" rows="4"><?php echo $editGame['description']; ?></textarea>
+                        <div class="mb-4">
+                            <label for="description" class="block text-gray-400 mb-2">Description</label>
+                            <textarea id="description" name="description" class="w-full bg-gray-700 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" rows="4"><?php echo $editGame['description']; ?></textarea>
                         </div>
                         
-                        <div class="form-group">
-                            <label>Current Image</label>
+                        <div class="mb-4">
+                            <label class="block text-gray-400 mb-2">Current Image</label>
                             <?php if (!empty($editGame['image'])): ?>
-                                <div class="image-preview">
-                                    <img src="../<?php echo $editGame['image']; ?>" alt="<?php echo $editGame['name']; ?>" style="max-width: 200px;">
+                                <div class="image-preview mb-4">
+                                    <img src="../<?php echo $editGame['image']; ?>" alt="<?php echo $editGame['name']; ?>" class="max-w-full h-auto rounded-lg" style="max-width: 200px;">
                                 </div>
                             <?php else: ?>
-                                <p>No image uploaded</p>
+                                <p class="text-gray-400">No image uploaded</p>
                             <?php endif; ?>
                         </div>
                         
-                        <div class="form-group">
-                            <label for="image">Upload New Image</label>
-                            <input type="file" id="image" name="image" class="form-control">
-                            <small>Leave empty to keep current image</small>
+                        <div class="mb-4">
+                            <label for="image" class="block text-gray-400 mb-2">Upload New Image</label>
+                            <input type="file" id="image" name="image" class="w-full bg-gray-700 text-white rounded-lg px-4 py-2">
+                            <small class="text-gray-400">Leave empty to keep current image</small>
                         </div>
                         
-                        <div class="form-group">
-                            <label class="checkbox-label">
-                                <input type="checkbox" name="featured" <?php echo $editGame['featured'] ? 'checked' : ''; ?>>
+                        <div class="mb-4">
+                            <label class="flex items-center text-gray-400">
+                                <input type="checkbox" name="featured" class="mr-2" <?php echo $editGame['featured'] ? 'checked' : ''; ?>>
                                 Featured Game
                             </label>
                         </div>
                         
-                        <div class="form-actions">
-                            <a href="games.php" class="btn btn-secondary">Cancel</a>
-                            <button type="submit" name="edit_game" class="btn btn-primary">Update Game</button>
+                        <div class="flex justify-between">
+                            <a href="games.php" class="bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded-lg font-medium transition-colors">Cancel</a>
+                            <button type="submit" name="edit_game" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">Update Game</button>
                         </div>
                     </form>
                 </div>
             <?php else: ?>
                 <!-- Add New Game Form -->
-                <div class="form-card">
-                    <h2>Add New Game</h2>
+                <div class="max-w-2xl mx-auto bg-gray-800 rounded-xl p-8 shadow-lg hover:shadow-indigo-500/20 transition-all duration-300 mb-12">
+                    <h2 class="text-2xl font-bold mb-6">Add New Game</h2>
                     <form action="games.php" method="POST" enctype="multipart/form-data">
-                        <div class="form-group">
-                            <label for="name">Game Name</label>
-                            <input type="text" id="name" name="name" class="form-control" required>
+                        <div class="mb-4">
+                            <label for="name" class="block text-gray-400 mb-2">Game Name</label>
+                            <input type="text" id="name" name="name" class="w-full bg-gray-700 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
                         </div>
                         
-                        <div class="form-group">
-                            <label for="slug">Slug (URL-friendly name)</label>
-                            <input type="text" id="slug" name="slug" class="form-control" required>
+                        <div class="mb-4">
+                            <label for="slug" class="block text-gray-400 mb-2">Slug (URL-friendly name)</label>
+                            <input type="text" id="slug" name="slug" class="w-full bg-gray-700 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
                         </div>
                         
-                        <div class="form-group">
-                            <label for="description">Description</label>
-                            <textarea id="description" name="description" class="form-control" rows="4"></textarea>
+                        <div class="mb-4">
+                            <label for="description" class="block text-gray-400 mb-2">Description</label>
+                            <textarea id="description" name="description" class="w-full bg-gray-700 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" rows="4"></textarea>
                         </div>
                         
-                        <div class="form-group">
-                            <label for="image">Game Image</label>
-                            <input type="file" id="image" name="image" class="form-control">
+                        <div class="mb-4">
+                            <label for="image" class="block text-gray-400 mb-2">Game Image</label>
+                            <input type="file" id="image" name="image" class="w-full bg-gray-700 text-white rounded-lg px-4 py-2">
                         </div>
                         
-                        <div class="form-group">
-                            <label class="checkbox-label">
-                                <input type="checkbox" name="featured">
+                        <div class="mb-4">
+                            <label class="flex items-center text-gray-400">
+                                <input type="checkbox" name="featured" class="mr-2">
                                 Featured Game
                             </label>
                         </div>
                         
-                        <div class="form-actions">
-                            <button type="submit" name="add_game" class="btn btn-primary">Add Game</button>
+                        <div class="flex justify-end">
+                            <button type="submit" name="add_game" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">Add Game</button>
                         </div>
                     </form>
                 </div>
                 
                 <!-- Games List -->
-                <div class="dashboard-card">
-                    <div class="card-header">
-                        <h2>All Games</h2>
-                    </div>
-                    <div class="card-content">
-                        <?php if (count($games) > 0): ?>
-                            <table class="data-table">
+                <div class="max-w-4xl mx-auto bg-gray-800 rounded-xl p-8 shadow-lg hover:shadow-indigo-500/20 transition-all duration-300">
+                    <h2 class="text-2xl font-bold mb-6">All Games</h2>
+                    <?php if (count($games) > 0): ?>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left">
                                 <thead>
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Image</th>
-                                        <th>Name</th>
-                                        <th>Slug</th>
-                                        <th>Featured</th>
-                                        <th>Actions</th>
+                                    <tr class="border-b border-gray-700">
+                                        <th class="py-3 px-4">ID</th>
+                                        <th class="py-3 px-4">Image</th>
+                                        <th class="py-3 px-4">Name</th>
+                                        <th class="py-3 px-4">Slug</th>
+                                        <th class="py-3 px-4">Featured</th>
+                                        <th class="py-3 px-4">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php foreach ($games as $game): ?>
-                                        <tr>
-                                            <td><?php echo $game['id']; ?></td>
-                                            <td>
+                                        <tr class="border-b border-gray-700">
+                                            <td class="py-3 px-4"><?php echo $game['id']; ?></td>
+                                            <td class="py-3 px-4">
                                                 <?php if (!empty($game['image'])): ?>
-                                                    <img src="../<?php echo $game['image']; ?>" alt="<?php echo $game['name']; ?>" style="width: 50px; height: 50px; object-fit: cover; border-radius: 5px;">
+                                                    <img src="../<?php echo $game['image']; ?>" alt="<?php echo $game['name']; ?>" class="w-12 h-12 object-cover rounded-lg">
                                                 <?php else: ?>
-                                                    <div style="width: 50px; height: 50px; background-color: #f0f0f0; border-radius: 5px; display: flex; align-items: center; justify-content: center;">
-                                                        <i class="fas fa-image" style="color: #999;"></i>
+                                                    <div class="w-12 h-12 bg-gray-600 rounded-lg flex items-center justify-center">
+                                                        <i class="fas fa-image text-gray-400"></i>
                                                     </div>
                                                 <?php endif; ?>
                                             </td>
-                                            <td><?php echo $game['name']; ?></td>
-                                            <td><?php echo $game['slug']; ?></td>
-                                            <td>
+                                            <td class="py-3 px-4"><?php echo $game['name']; ?></td>
+                                            <td class="py-3 px-4"><?php echo $game['slug']; ?></td>
+                                            <td class="py-3 px-4">
                                                 <?php if ($game['featured']): ?>
-                                                    <span class="status-badge status-completed">Yes</span>
+                                                    <span class="bg-green-500 text-white text-xs px-2 py-1 rounded">Yes</span>
                                                 <?php else: ?>
-                                                    <span class="status-badge status-cancelled">No</span>
+                                                    <span class="bg-red-500 text-white text-xs px-2 py-1 rounded">No</span>
                                                 <?php endif; ?>
                                             </td>
-                                            <td>
-                                                <a href="games.php?edit=<?php echo $game['id']; ?>" class="btn btn-sm btn-secondary">Edit</a>
-                                                <a href="games.php?delete=<?php echo $game['id']; ?>" class="btn btn-sm btn-danger" data-confirm="Are you sure you want to delete this game?">Delete</a>
+                                            <td class="py-3 px-4 flex space-x-2">
+                                                <a href="games.php?edit=<?php echo $game['id']; ?>" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-lg text-sm transition-colors">Edit</a>
+                                                <a href="games.php?delete=<?php echo $game['id']; ?>" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg text-sm transition-colors" onclick="return confirm('Are you sure you want to delete this game?')">Delete</a>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>
                             </table>
-                        <?php else: ?>
-                            <p class="no-data">No games found. Add your first game using the form above.</p>
-                        <?php endif; ?>
-                    </div>
+                        </div>
+                    <?php else: ?>
+                        <p class="text-center text-gray-400">No games found. Add your first game using the form above.</p>
+                    <?php endif; ?>
                 </div>
             <?php endif; ?>
-        </main>
-    </div>
+        </div>
+    </section>
 
-    <script src="../assets/js/admin.js"></script>
+    <!-- Use the main site's footer -->
+    <?php include '../includes/footer.php'; ?>
+    
+    <script src="../assets/js/script.js"></script>
 </body>
 </html>
