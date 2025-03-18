@@ -10,44 +10,20 @@ $featured_games = getAllGames($conn);
 // If no games are fetched from the database, use hardcoded data with IDs
 if (empty($featured_games)) {
     $featured_games = [
-        [
-            'id' => 1,
-            'name' => 'Marvel Rivals',
-            'description' => 'Marvel Rivals is a team-based hero shooter featuring iconic Marvel characters...',
-            'image' => 'marvelrivals.jpg',
-            'accounts' => 0 // Added accounts key with default value
-        ],
-        [
-            'id' => 2,
-            'name' => 'Call of Duty',
-            'description' => 'Call of Duty is a first-person shooter game series published by Activision...',
-            'image' => 'callofduty.jpg',
-            'accounts' => 0 // Added accounts key with default value
-        ],
-        [
-            'id' => 3,
-            'name' => 'Fragpunk',
-            'description' => 'Fragpunk is a futuristic first-person shooter with cyberpunk elements...',
-            'image' => 'fragpunk.jpg',
-            'accounts' => 0 // Added accounts key with default value
-        ],
-        [
-            'id' => 4,
-            'name' => 'Overwatch',
-            'description' => 'Overwatch is a team-based multiplayer first-person shooter developed by Blizzard...',
-            'image' => 'overwatch.jpg',
-            'accounts' => 0 // Added accounts key with default value
-        ]
+        ['id' => 1, 'name' => 'Marvel Rivals', 'description' => 'Marvel Rivals is a team-based hero shooter...', 'image' => 'marvelrivals.jpg', 'accounts' => 0],
+        ['id' => 2, 'name' => 'Call of Duty', 'description' => 'Call of Duty is a first-person shooter...', 'image' => 'callofduty.jpg', 'accounts' => 0],
+        ['id' => 3, 'name' => 'Fragpunk', 'description' => 'Fragpunk is a futuristic first-person shooter...', 'image' => 'fragpunk.jpg', 'accounts' => 0],
+        ['id' => 4, 'name' => 'Overwatch', 'description' => 'Overwatch is a team-based multiplayer...', 'image' => 'overwatch.jpg', 'accounts' => 0]
     ];
 }
 
-// If using database, ensure 'accounts' key is set
+// Ensure 'accounts' key is set
 foreach ($featured_games as &$game) {
     if (!isset($game['accounts'])) {
-        $game['accounts'] = 0; // Set default value if 'accounts' is not set
+        $game['accounts'] = 0;
     }
 }
-unset($game); // Unset the reference to avoid issues
+unset($game);
 ?>
 
 <!DOCTYPE html>
@@ -67,13 +43,14 @@ unset($game); // Unset the reference to avoid issues
         <div class="container mx-auto px-4 text-center">
             <h1 class="text-5xl font-bold mb-4">Level Up Your Gaming Experience</h1>
             <p class="text-xl text-gray-300 mb-8">Premium gaming accounts for Marvel Rivals, Call of Duty, Fragpunk, and Overwatch at unbeatable prices.</p>
+            <!-- Debug: Show the value of is_admin -->
             <div class="space-x-4">
                 <a href="accounts.php" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-medium transition-colors">Browse Accounts</a>
                 <a href="games.php" class="bg-gray-600 hover:bg-gray-500 text-white px-6 py-3 rounded-lg font-medium transition-colors">Explore Games</a>
             </div>
         </div>
     </section>
-    
+
     <!-- Featured Games -->
     <section class="py-16">
         <div class="container mx-auto px-4">

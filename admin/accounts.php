@@ -12,46 +12,121 @@ requireAdmin($conn);
 $accounts = getAllAccounts($conn);
 $games = getAllGames($conn);
 
-// إضافة حساب جديد
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_account'])) {
-    $title = $_POST['title'];
-    $game_id = $_POST['game_id'];
-    $price = $_POST['price'];
-    $status = $_POST['status'];
-    $image = $_FILES['image']['name'];
-    $target_dir = "../assets/images/accounts/";
-    $target_file = $target_dir . basename($image);
-    if (!move_uploaded_file($_FILES['image']['tmp_name'], $target_file)) {
-        die("Failed to upload image.");
-    }
+$error = '';
+$success = '';
 
-    if (!addAccount($conn, $title, $game_id, $price, $status, $image)) {
-        die("Failed to add account: " . $conn->error);
-    }
-    header("Location: /kernelstore/admin/accounts.php");
-    exit();
-}
-
-// تعديل حساب
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_account'])) {
-    $id = $_POST['id'];
-    $title = $_POST['title'];
-    $game_id = $_POST['game_id'];
-    $price = $_POST['price'];
-    $status = $_POST['status'];
-    $image = isset($_FILES['image']) && $_FILES['image']['name'] ? $_FILES['image']['name'] : null;
-    if ($image) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (isset($_POST['add_account'])) {
+        // إضافة حساب جديد
+        $title = trim($_POST['title'] ?? '');
+        $game_id = (int)($_POST['game_id'] ?? 0);
+        $price = floatval($_POST['price'] ?? 0);
+        $platform = $_POST['platform'] ?? 'Unknown';
+        $image = $_FILES['image']['name'];
         $target_dir = "../assets/images/accounts/";
         $target_file = $target_dir . basename($image);
-        if (!move_uploaded_file($_FILES['image']['tmp_name'], $target_file)) {
-            die("Failed to upload image.");
+
+        if (empty($title) || $game_id <= 0 || $price <= 0 || empty($image)) {
+            $error = "All fields (Title, Game, Price, Image) are required!";
+        } else {
+            if (move_uploaded_file($_FILES['image']['tmp_name'], $target_file)) {
+                $sql = "INSERT INTO accounts (title, game_id, price, platform, image) VALUES (?, ?, ?, ?, ?)";
+                $stmt = $conn->prepare($sql);
+                if ($stmt === false) {
+                    $error = "Prepare failed: " . $conn->error;
+                } else {
+                    $stmt->bind_param("sidss", $title, $game_id, $price, $platform, $image);
+                    if ($stmt->execute()) {
+                        $success = "Account added successfully!";
+                        $title = $price = '';
+                    } else {
+                        $error = "Failed to add account: " . $conn->error;
+                    }
+                    $stmt->close();
+                }
+            } else {
+                $error = "Failed to upload image.";
+            }
+        }
+    } elseif (isset($_POST['update_account'])) {
+        // تعديل حساب
+        $id = (int)($_POST['id'] ?? 0);
+        $title = trim($_POST['title'] ?? '');
+        $game_id = (int)($_POST['game_id'] ?? 0);
+        $price = floatval($_POST['price'] ?? 0);
+        $platform = $_POST['platform'] ?? 'Unknown';
+        $image = isset($_FILES['image']) && $_FILES['image']['name'] ? $_FILES['image']['name'] : null;
+
+        if (empty($title) || $game_id <= 0 || $price <= 0 || $id <= 0) {
+            $error = "All fields (Title, Game, Price, ID) are required!";
+        } else {
+            if ($image) {
+                $target_dir = "../assets/images/accounts/";
+                $target_file = $target_dir . basename($image);
+                if (!move_uploaded_file($_FILES['image']['tmp_name'], $target_file)) {
+                    $error = "Failed to upload image.";
+                } else {
+                    $sql = "UPDATE accounts SET title = ?, game_id = ?, price = ?, platform = ?, image = ? WHERE id = ?";
+                    $stmt = $conn->prepare($sql);
+                    $stmt->bind_param("sidssi", $title, $game_id, $price, $platform, $image, $id);
+                }
+            } else {
+                $sql = "UPDATE accounts SET title = ?, game_id = ?, price = ?, platform = ? WHERE id = ?";
+                $stmt = $conn->prepare($sql);
+                $stmt->bind_param("sidsi", $title, $game_id, $price, $platform, $id);
+            }
+            if ($stmt === false) {
+                $error = "Prepare failed: " . $conn->error;
+            } elseif ($stmt->execute()) {
+                $success = "Account updated successfully!";
+            } else {
+                $error = "Failed to update account: " . $conn->error;
+            }
+            $stmt->close();
+        }
+    } elseif (isset($_POST['delete_account_id'])) {
+        // حذف حساب
+        $account_id = (int)($_POST['delete_account_id'] ?? 0);
+        if ($account_id > 0) {
+            // تحقق من وجود طلبات مرتبطة وحذفها أولاً
+            $sql_check = "SELECT COUNT(*) as count FROM orders WHERE account_id = ?";
+            $stmt_check = $conn->prepare($sql_check);
+            $stmt_check->bind_param("i", $account_id);
+            $stmt_check->execute();
+            $result = $stmt_check->get_result();
+            $row = $result->fetch_assoc();
+            $stmt_check->close();
+
+            if ($row['count'] > 0) {
+                $sql_delete_orders = "DELETE FROM orders WHERE account_id = ?";
+                $stmt_delete_orders = $conn->prepare($sql_delete_orders);
+                $stmt_delete_orders->bind_param("i", $account_id);
+                if ($stmt_delete_orders->execute()) {
+                    $stmt_delete_orders->close();
+                } else {
+                    $error = "Failed to delete related orders: " . $conn->error;
+                    $stmt_delete_orders->close();
+                }
+            }
+
+            // حذف الحساب
+            $sql = "DELETE FROM accounts WHERE id = ?";
+            $stmt = $conn->prepare($sql);
+            if ($stmt === false) {
+                $error = "Prepare failed: " . $conn->error;
+            } else {
+                $stmt->bind_param("i", $account_id);
+                if ($stmt->execute()) {
+                    $success = "Account deleted successfully!";
+                } else {
+                    $error = "Failed to delete account: " . $conn->error;
+                }
+                $stmt->close();
+            }
+        } else {
+            $error = "Invalid account ID!";
         }
     }
-    if (!updateAccount($conn, $id, $title, $game_id, $price, $status, $image)) {
-        die("Failed to update account: " . $conn->error);
-    }
-    header("Location: /kernelstore/admin/accounts.php");
-    exit();
 }
 ?>
 
@@ -79,14 +154,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_account'])) {
     <section class="py-8">
         <div class="container mx-auto px-4">
             <h2 class="text-2xl font-bold mb-4">Add New Account</h2>
+            <?php if ($error): ?>
+                <div class="bg-red-500/20 border border-red-500 text-red-300 px-4 py-3 rounded-lg mb-4">
+                    <?php echo $error; ?>
+                </div>
+            <?php endif; ?>
+            <?php if ($success): ?>
+                <div class="bg-green-500/20 border border-green-500 text-green-300 px-4 py-3 rounded-lg mb-4">
+                    <?php echo $success; ?>
+                </div>
+            <?php endif; ?>
             <form method="POST" enctype="multipart/form-data" class="bg-gray-800 rounded-xl p-6 max-w-lg">
                 <div class="mb-4">
                     <label for="title" class="block text-gray-400 mb-2">Account Title</label>
-                    <input type="text" id="title" name="title" class="w-full bg-gray-700 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+                    <input type="text" id="title" name="title" value="" class="w-full bg-gray-700 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
                 </div>
                 <div class="mb-4">
                     <label for="game_id" class="block text-gray-400 mb-2">Game</label>
                     <select id="game_id" name="game_id" class="w-full bg-gray-700 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+                        <option value="">Select Game</option>
                         <?php foreach ($games as $game): ?>
                             <option value="<?php echo $game['id']; ?>"><?php echo htmlspecialchars($game['name']); ?></option>
                         <?php endforeach; ?>
@@ -94,20 +180,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_account'])) {
                 </div>
                 <div class="mb-4">
                     <label for="price" class="block text-gray-400 mb-2">Price</label>
-                    <input type="number" step="0.01" id="price" name="price" class="w-full bg-gray-700 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+                    <input type="number" step="0.01" id="price" name="price" value="" class="w-full bg-gray-700 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
                 </div>
                 <div class="mb-4">
-                    <label for="status" class="block text-gray-400 mb-2">Status</label>
-                    <select id="status" name="status" class="w-full bg-gray-700 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
-                        <option value="available">Available</option>
-                        <option value="sold">Sold</option>
+                    <label for="platform" class="block text-gray-400 mb-2">Platform</label>
+                    <select id="platform" name="platform" class="w-full bg-gray-700 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+                        <option value="Unknown">Select Platform</option>
+                        <option value="PlayStation 5">PlayStation 5</option>
+                        <option value="Xbox">Xbox</option>
+                        <option value="PC">PC</option>
                     </select>
                 </div>
                 <div class="mb-4">
                     <label for="image" class="block text-gray-400 mb-2">Account Image</label>
                     <input type="file" id="image" name="image" class="w-full bg-gray-700 text-white rounded-lg px-4 py-2 focus:outline-none" required>
                 </div>
-                <button type="submit" name="add_account" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">Add Account</button>
+                <button type="submit" name="add_account" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                    Add Account
+                </button>
             </form>
         </div>
     </section>
@@ -124,14 +214,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_account'])) {
                         <div class="p-6">
                             <h3 class="text-xl font-bold mb-2"><?php echo htmlspecialchars($account['title']); ?></h3>
                             <p class="text-gray-400 mb-2"><?php echo htmlspecialchars($account['game_name']); ?></p>
-                            <p class="text-white font-bold mb-4">$<?php echo number_format($account['price'], 2); ?></p>
-                            <p class="text-gray-400 mb-4">Status: <?php echo htmlspecialchars($account['status']); ?></p>
+                            <p class="text-white font-bold mb-2">$<?php echo number_format($account['price'], 2); ?></p>
+                            <p class="text-gray-400 mb-2">Platform: <?php echo htmlspecialchars($account['platform'] ?? 'Unknown'); ?></p>
                             <div class="flex space-x-2">
-                                <button onclick="openEditModal(<?php echo $account['id']; ?>, '<?php echo htmlspecialchars($account['title']); ?>', '<?php echo $account['game_id']; ?>', '<?php echo $account['price']; ?>', '<?php echo $account['status']; ?>')" class="text-green-400 hover:text-green-300">Edit</button>
-                                <form method="POST" action="" style="display:inline;">
-                                    <input type="hidden" name="delete_account_id" value="<?php echo $account['id']; ?>">
-                                    <button type="submit" class="text-red-400 hover:text-red-300">Delete</button>
-                                </form>
+                                <button onclick="openEditModal(<?php echo $account['id']; ?>, '<?php echo htmlspecialchars($account['title']); ?>', '<?php echo $account['game_id']; ?>', '<?php echo $account['price']; ?>', '<?php echo htmlspecialchars($account['platform'] ?? 'Unknown'); ?>')" class="text-green-400 hover:text-green-300">Edit</button>
+                                <button onclick="confirmDelete(<?php echo $account['id']; ?>)" class="text-red-400 hover:text-red-300">Delete</button>
                             </div>
                         </div>
                     </div>
@@ -144,6 +231,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_account'])) {
     <div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
         <div class="bg-gray-800 rounded-xl p-6 max-w-lg w-full">
             <h2 class="text-2xl font-bold mb-4">Edit Account</h2>
+            <?php if ($error): ?>
+                <div class="bg-red-500/20 border border-red-500 text-red-300 px-4 py-3 rounded-lg mb-4">
+                    <?php echo $error; ?>
+                </div>
+            <?php endif; ?>
+            <?php if ($success): ?>
+                <div class="bg-green-500/20 border border-green-500 text-green-300 px-4 py-3 rounded-lg mb-4">
+                    <?php echo $success; ?>
+                </div>
+            <?php endif; ?>
             <form method="POST" enctype="multipart/form-data">
                 <input type="hidden" id="edit_id" name="id">
                 <div class="mb-4">
@@ -163,10 +260,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_account'])) {
                     <input type="number" step="0.01" id="edit_price" name="price" class="w-full bg-gray-700 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
                 </div>
                 <div class="mb-4">
-                    <label for="edit_status" class="block text-gray-400 mb-2">Status</label>
-                    <select id="edit_status" name="status" class="w-full bg-gray-700 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
-                        <option value="available">Available</option>
-                        <option value="sold">Sold</option>
+                    <label for="edit_platform" class="block text-gray-400 mb-2">Platform</label>
+                    <select id="edit_platform" name="platform" class="w-full bg-gray-700 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+                        <option value="Unknown">Select Platform</option>
+                        <option value="PlayStation 5">PlayStation 5</option>
+                        <option value="Xbox">Xbox</option>
+                        <option value="PC">PC</option>
                     </select>
                 </div>
                 <div class="mb-4">
@@ -174,8 +273,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_account'])) {
                     <input type="file" id="edit_image" name="image" class="w-full bg-gray-700 text-white rounded-lg px-4 py-2 focus:outline-none">
                 </div>
                 <div class="flex space-x-2">
-                    <button type="submit" name="update_account" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">Update</button>
-                    <button type="button" onclick="closeEditModal()" class="bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded-lg font-medium transition-colors">Cancel</button>
+                    <button type="submit" name="update_account" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                        Update
+                    </button>
+                    <button type="button" onclick="closeEditModal()" class="bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                        Cancel
+                    </button>
                 </div>
             </form>
         </div>
@@ -183,16 +286,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_account'])) {
     
     <?php
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_account_id'])) {
-        $account_id = $_POST['delete_account_id'];
-        $sql = "DELETE FROM accounts WHERE id = ?";
-        $stmt = $conn->prepare($sql);
-        if ($stmt === false) {
-            die("Prepare failed: " . $conn->error);
+        $account_id = (int)($_POST['delete_account_id'] ?? 0);
+        if ($account_id > 0) {
+            // تحقق من وجود طلبات مرتبطة وحذفها أولاً
+            $sql_check = "SELECT COUNT(*) as count FROM orders WHERE account_id = ?";
+            $stmt_check = $conn->prepare($sql_check);
+            $stmt_check->bind_param("i", $account_id);
+            $stmt_check->execute();
+            $result = $stmt_check->get_result();
+            $row = $result->fetch_assoc();
+            $stmt_check->close();
+
+            if ($row['count'] > 0) {
+                $sql_delete_orders = "DELETE FROM orders WHERE account_id = ?";
+                $stmt_delete_orders = $conn->prepare($sql_delete_orders);
+                $stmt_delete_orders->bind_param("i", $account_id);
+                if (!$stmt_delete_orders->execute()) {
+                    $error = "Failed to delete related orders: " . $conn->error;
+                }
+                $stmt_delete_orders->close();
+            }
+
+            // حذف الحساب
+            $sql = "DELETE FROM accounts WHERE id = ?";
+            $stmt = $conn->prepare($sql);
+            if ($stmt === false) {
+                $error = "Prepare failed: " . $conn->error;
+            } else {
+                $stmt->bind_param("i", $account_id);
+                if ($stmt->execute()) {
+                    $success = "Account deleted successfully!";
+                } else {
+                    $error = "Failed to delete account: " . $conn->error;
+                }
+                $stmt->close();
+            }
+        } else {
+            $error = "Invalid account ID!";
         }
-        $stmt->bind_param("i", $account_id);
-        $stmt->execute();
-        header("Location: /kernelstore/admin/accounts.php");
-        exit();
     }
     ?>
     
@@ -201,17 +332,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_account'])) {
     
     <script src="../assets/js/admin.js"></script>
     <script>
-        function openEditModal(id, title, game_id, price, status) {
+        function openEditModal(id, title, game_id, price, platform) {
             document.getElementById('edit_id').value = id;
             document.getElementById('edit_title').value = title;
             document.getElementById('edit_game_id').value = game_id;
             document.getElementById('edit_price').value = price;
-            document.getElementById('edit_status').value = status;
+            document.getElementById('edit_platform').value = platform;
             document.getElementById('editModal').classList.remove('hidden');
         }
 
         function closeEditModal() {
             document.getElementById('editModal').classList.add('hidden');
+        }
+
+        function confirmDelete(accountId) {
+            if (confirm('Are you sure you want to delete this account? This will also delete related orders.')) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '';
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'delete_account_id';
+                input.value = accountId;
+                form.appendChild(input);
+                document.body.appendChild(form);
+                form.submit();
+            }
         }
     </script>
 </body>

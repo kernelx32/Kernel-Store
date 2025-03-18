@@ -40,14 +40,23 @@ function requireAdmin($conn) {
 }
 
 function logout() {
+    // مسح الكوكيز بتاع "Remember Me"
+    if (isset($_COOKIE['remember_token'])) {
+        setcookie('remember_token', '', time() - 3600); // إزالة الكوكيز
+    }
+    // دمج الجلسة وتجديد المعرف
     session_destroy();
+    session_regenerate_id(true); // إعادة تهيئة الجلسة
     header("Location: /kernelstore/index.php");
     exit();
 }
 
 function login($conn, $email, $password) {
-    $sql = "SELECT id, password FROM users WHERE email = ?";
+    $sql = "SELECT id, username, password, is_admin FROM users WHERE email = ?";
     $stmt = $conn->prepare($sql);
+    if ($stmt === false) {
+        die("Prepare failed: " . $conn->error);
+    }
     $stmt->bind_param("s", $email);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -56,6 +65,8 @@ function login($conn, $email, $password) {
         $user = $result->fetch_assoc();
         if (password_verify($password, $user['password'])) {
             $_SESSION['user_id'] = $user['id'];
+            $_SESSION['username'] = $user['username'];
+            $_SESSION['is_admin'] = $user['is_admin'] ?? 0;
             return true;
         }
     }
@@ -71,10 +82,13 @@ function register($conn, $email, $password, $username) {
 }
 
 function checkRememberToken($conn) {
-    if (isset($_COOKIE['remember_token'])) {
+    if (!isLoggedIn() && isset($_COOKIE['remember_token'])) {
         $token = $_COOKIE['remember_token'];
-        $sql = "SELECT id FROM users WHERE remember_token = ?";
+        $sql = "SELECT id, username, is_admin FROM users WHERE remember_token = ?";
         $stmt = $conn->prepare($sql);
+        if ($stmt === false) {
+            die("Prepare failed: " . $conn->error);
+        }
         $stmt->bind_param("s", $token);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -82,6 +96,8 @@ function checkRememberToken($conn) {
         if ($result->num_rows === 1) {
             $user = $result->fetch_assoc();
             $_SESSION['user_id'] = $user['id'];
+            $_SESSION['username'] = $user['username'];
+            $_SESSION['is_admin'] = $user['is_admin'] ?? 0;
             return true;
         }
     }

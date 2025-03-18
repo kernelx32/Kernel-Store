@@ -10,11 +10,7 @@ if (!$conn || $conn->connect_error) {
 }
 
 if (isLoggedIn()) {
-    if (isAdmin($conn)) {
-        header("Location: /kernelstore/admin/index.php");
-    } else {
-        header("Location: /kernelstore/profile.php");
-    }
+    header("Location: /kernelstore/index.php");
     exit();
 }
 
@@ -43,11 +39,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             setcookie('remember_token', $token, time() + (30 * 24 * 60 * 60)); // 30 days
         }
-        if (isAdmin($conn)) {
-            header("Location: /kernelstore/admin/index.php");
-        } else {
-            header("Location: /kernelstore/profile.php");
-        }
+
+        header("Location: /kernelstore/index.php");
         exit();
     } else {
         $error = "Invalid email or password.";
